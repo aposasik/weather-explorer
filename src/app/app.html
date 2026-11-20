@@ -1,0 +1,91 @@
+<div class="shell">
+  <header class="top">
+    <h1 class="brand"><span aria-hidden="true">🌍</span> Weather Atlas</h1>
+    <app-search-box class="search" (placePicked)="onPlaceFound($event)" />
+    <button type="button" class="locate" (click)="locate()" [disabled]="isLocating()">
+      <span aria-hidden="true">📍</span> {{ isLocating() ? 'Finding you…' : 'My location' }}
+    </button>
+  </header>
+
+  <main class="stage">
+    <section class="map-area" aria-label="Map">
+      <app-world-map
+        [timelines]="mapTimelines()"
+        [layer]="layer()"
+        [hour]="hour()"
+        [savedPlaces]="store.savedPlaces()"
+        [focusedPlace]="store.selectedPlace()"
+        (viewChanged)="onMapMoved($event)"
+        (pointPicked)="onMapClicked($event)"
+        (savedPinClicked)="store.select($event)"
+      />
+
+      <div class="controls">
+        <div class="layers" role="radiogroup" aria-label="What the map shows">
+          @for (option of layerOptions; track option.id) {
+            <button type="button" role="radio" [attr.aria-checked]="layer() === option.id" [class.on]="layer() === option.id" (click)="layer.set(option.id)">
+              {{ option.label }}
+            </button>
+          }
+        </div>
+        <div class="legend" aria-label="Colour legend">
+          @for (stop of legendStops(); track stop.value) {
+            <span class="stop" [style.background]="stop.color">{{ stop.text }}</span>
+          }
+          <span class="unit">{{ layerUnit() }}</span>
+        </div>
+      </div>
+
+      <div class="timeline">
+        <button type="button" class="play" (click)="togglePlay()" [attr.aria-label]="isPlaying() ? 'Pause' : 'Play the next 24 hours'">
+          {{ isPlaying() ? '❚❚' : '▶' }}
+        </button>
+        <label class="sr-only" for="hour">Hour</label>
+        <input id="hour" type="range" min="0" [max]="maxHour" [value]="hour()" (input)="setHour(+$any($event.target).value)" />
+        <output for="hour" class="when">{{ hourLabel().when }} <small>{{ hourLabel().offset }}</small></output>
+      </div>
+
+      @if (noticeMessage(); as message) {
+        <p class="notice" role="status">{{ message }}</p>
+      }
+    </section>
+
+    <aside class="panel">
+      @if (store.selectedPlace(); as place) {
+        <app-place-detail
+          [place]="place"
+          [isSaved]="store.isSelectedSaved()"
+          (saveClicked)="store.toggleSaved(place)"
+          (closed)="store.select(null)"
+        />
+      } @else {
+        <div class="welcome">
+          <h2>Explore the world's weather</h2>
+          <ul>
+            <li><b>Move and zoom the map</b>: the coloured chips show the weather across the area you are looking at.</li>
+            <li><b>Switch</b> between temperature, rain and wind, and <b>press ▶</b> to watch the next 24 hours.</li>
+            <li><b>Click anywhere</b> or search a town to see its full forecast.</li>
+            <li><b>Save</b> places to compare them side by side.</li>
+          </ul>
+          <button type="button" class="cta" (click)="locate()">📍 Show the weather where I am</button>
+        </div>
+      }
+
+      <app-my-places
+        [savedPlaces]="store.savedPlaces()"
+        [timelines]="placeTimelines()"
+        [layer]="layer()"
+        [hour]="hour()"
+        [selectedId]="store.selectedPlace()?.id ?? null"
+        (placeOpened)="store.select($event)"
+        (placeRemoved)="store.remove($event.id)"
+        (clearAllClicked)="store.clearAll()"
+      />
+
+      <footer class="foot">
+        Data: <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a> ·
+        {{ requestCount() }} API request{{ requestCount() === 1 ? '' : 's' }} this visit
+      </footer>
+    </aside>
+  </main>
+</div>

@@ -1,0 +1,41 @@
+<section class="mine" aria-labelledby="mine-title">
+  <div class="head">
+    <h2 id="mine-title">My places <span class="count">{{ savedPlaces().length }}</span></h2>
+    @if (savedPlaces().length > 1) {
+      <div class="sort" role="group" aria-label="Sort places">
+        <button type="button" [class.on]="sortBy() === 'added'" (click)="sortBy.set('added')">Added</button>
+        <button type="button" [class.on]="sortBy() === 'value'" (click)="sortBy.set('value')">Highest first</button>
+        <button type="button" (click)="clearAllClicked.emit()">Clear all</button>
+      </div>
+    }
+  </div>
+
+  @if (highestAndLowest(); as summary) {
+    <p class="summary">
+      Highest: <b>{{ summary.top.place.name }}</b> {{ summary.top.text }}{{ layer() === 'temperature' ? '' : ' ' + summary.unit }} ·
+      lowest: <b>{{ summary.bottom.place.name }}</b> {{ summary.bottom.text }}{{ layer() === 'temperature' ? '' : ' ' + summary.unit }}
+    </p>
+  }
+
+  @if (savedPlaces().length === 0) {
+    <p class="empty">Open any place and press <b>☆ Save</b>. Saved places stay here, side by side, so you can compare them hour by hour.</p>
+  } @else {
+    <ul class="cards">
+      @for (card of placeCards(); track card.place.id) {
+        <li [class.sel]="card.place.id === selectedId()" [style.--weather-color]="card.color">
+          <button type="button" class="card" (click)="placeOpened.emit(card.place)">
+            <span class="name">{{ card.place.name }}</span>
+            <span class="val"><span aria-hidden="true">{{ card.icon }}</span> {{ card.text }}</span>
+            @if (card.sparkline; as line) {
+              <svg viewBox="0 0 100 24" class="spark" aria-hidden="true">
+                <path [attr.d]="line.path" />
+                <circle [attr.cx]="line.dotX" [attr.cy]="line.dotY" r="2.4" />
+              </svg>
+            }
+          </button>
+          <button type="button" class="x" (click)="placeRemoved.emit(card.place)" [attr.aria-label]="'Remove ' + card.place.name">✕</button>
+        </li>
+      }
+    </ul>
+  }
+</section>

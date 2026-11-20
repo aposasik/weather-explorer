@@ -1,0 +1,76 @@
+<article class="detail" aria-live="polite">
+  <header>
+    <div>
+      <h2>{{ place().name }}</h2>
+      <p class="sub">
+        {{ place().region ? place().region + ', ' : '' }}{{ place().country ?? coordinatesText() }}
+        @if (loadedForecast(); as forecast) {
+          · local time {{ localTime(forecast.current.time) }}
+        }
+      </p>
+    </div>
+    <div class="actions">
+      <button type="button" class="save" [class.on]="isSaved()" (click)="saveClicked.emit()" [attr.aria-pressed]="isSaved()">
+        {{ isSaved() ? '★ Saved' : '☆ Save' }}
+      </button>
+      <button type="button" class="close" (click)="closed.emit()" aria-label="Close details">✕</button>
+    </div>
+  </header>
+
+  @switch (forecastState().status) {
+    @case ('loading') {
+      <div class="skeleton" aria-label="Loading forecast"></div>
+    }
+    @case ('error') {
+      <p class="error">Couldn't load the forecast. The free weather service may be busy. Close and open the place again in a minute.</p>
+    }
+    @case ('ready') {
+      @if (loadedForecast(); as forecast) {
+        <section class="now">
+          <span class="big-icon" aria-hidden="true">{{ currentWeather()?.icon }}</span>
+          <div>
+            <p class="temp">{{ roundNumber(forecast.current.temperature) }}°</p>
+            <p class="cond">{{ currentWeather()?.label }} · feels {{ roundNumber(forecast.current.feelsLike) }}°</p>
+          </div>
+          <dl class="facts">
+            <div><dt>Wind</dt><dd><span class="arrow" [style.transform]="windArrowRotation(forecast.current.windDirection)">↑</span> {{ roundNumber(forecast.current.windSpeed) }} km/h</dd></div>
+            <div><dt>Humidity</dt><dd>{{ forecast.current.humidity }}%</dd></div>
+            <div><dt>Sun</dt><dd>↑ {{ forecast.daily.sunrise[0]?.slice(11, 16) }} ↓ {{ forecast.daily.sunset[0]?.slice(11, 16) }}</dd></div>
+            <div><dt>Rain now</dt><dd>{{ forecast.current.precipitation }} mm</dd></div>
+          </dl>
+        </section>
+
+        @if (temperatureChart(); as graph) {
+          <section>
+            <h3>Next 24 hours</h3>
+            <svg viewBox="0 -4 240 78" class="chart" role="img" [attr.aria-label]="'Temperature from ' + graph.min + ' to ' + graph.max + ' degrees'">
+              @for (bar of graph.rain; track $index) {
+                <rect [attr.x]="bar.x" [attr.y]="60 - bar.height" width="5" [attr.height]="bar.height" class="rain" />
+              }
+              <path [attr.d]="graph.area" class="area" />
+              <path [attr.d]="graph.line" class="line" />
+              @for (tick of graph.ticks; track tick.x) {
+                <text [attr.x]="tick.x" y="72" class="tick">{{ tick.label }}</text>
+              }
+            </svg>
+            <p class="legend"><span class="sw line-sw"></span>temperature {{ graph.min }}–{{ graph.max }}° <span class="sw rain-sw"></span>chance of rain</p>
+          </section>
+        }
+
+        <section>
+          <h3>Next 7 days</h3>
+          <ol class="days">
+            @for (day of forecast.daily.time; track day; let dayIndex = $index) {
+              <li>
+                <span class="dname">{{ dayName(day, dayIndex) }}</span>
+                <span class="dicon" [title]="weatherLabel(forecast.daily.weatherCode[dayIndex])">{{ weatherIcon(forecast.daily.weatherCode[dayIndex]) }}</span>
+                <span class="range"><b>{{ roundNumber(forecast.daily.maxTemperature[dayIndex]) }}°</b> {{ roundNumber(forecast.daily.minTemperature[dayIndex]) }}°</span>
+                <span class="dr">{{ forecast.daily.precipitationSum[dayIndex] > 0 ? forecast.daily.precipitationSum[dayIndex].toFixed(1) + ' mm' : '' }}</span>
+              </li>
+            }
+          </ol>
+        </section>
+      }
+    }
+  }
+</article>
